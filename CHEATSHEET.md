@@ -11,6 +11,7 @@ pip install -r requirements-dev.txt
 ```bash
 ruff check .                    # Lint and import ordering
 pytest -q                       # Run test suite
+python -m compileall app.py tests
 ```
 
 ## Run app locally
@@ -20,7 +21,7 @@ curl -s http://localhost:8000/health
 curl -s http://localhost:8000/version
 ```
 
-## Docker local lifecycle
+## Docker lifecycle (local)
 ```bash
 docker build -t ci-cd-docker-release:local .
 docker run --rm -p 8000:8000 \
@@ -29,10 +30,14 @@ docker run --rm -p 8000:8000 \
   ci-cd-docker-release:local
 ```
 
-## Docker smoke test (manual)
+## Docker smoke test (local)
 ```bash
-docker run -d --name smoke -p 8000:8000 ci-cd-docker-release:local
+docker run -d --name smoke -p 8000:8000 \
+  -e APP_VERSION=smoke \
+  -e GIT_SHA=smoke-sha \
+  ci-cd-docker-release:local
 curl -fsS http://localhost:8000/health
+curl -fsS http://localhost:8000/version
 docker logs smoke
 docker rm -f smoke
 ```
@@ -40,24 +45,25 @@ docker rm -f smoke
 ## Tagging & release
 ```bash
 git tag v0.1.0                 # Create semver tag
-git push origin v0.1.0         # Trigger semver image publish
+git push origin v0.1.0         # Trigger semver publish
 gh release create v0.1.0 --generate-notes
 ```
 
-## GHCR auth and push (manual fallback)
+## GHCR auth and manual push fallback
 ```bash
 echo "$GITHUB_TOKEN" | docker login ghcr.io -u <github-user> --password-stdin
 docker tag ci-cd-docker-release:local ghcr.io/<owner>/<repo>:$(git rev-parse --short HEAD)
 docker push ghcr.io/<owner>/<repo>:$(git rev-parse --short HEAD)
 ```
 
-## Debugging CI quickly
+## Actions troubleshooting
 ```bash
+# Why was push-image skipped?
+# Because event/ref didn't match: main push, semver tag, or release.
+
 git status
 git log --oneline -n 5
 git show --name-only
-act -j tests                   # If using nektos/act locally
-docker system df
 ```
 
 ## Useful one-liners
