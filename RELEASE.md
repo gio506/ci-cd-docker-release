@@ -5,11 +5,11 @@
 - Example: `v1.4.2`.
 
 ## Pre-release checklist
-1. Verify local quality checks:
+1. Confirm local quality gates:
    - `ruff check .`
    - `pytest -q`
-2. Confirm `CHANGELOG.md` has an entry for the upcoming version.
-3. Merge changes into `main`.
+2. Confirm `CHANGELOG.md` includes release notes.
+3. Merge approved PR into `main`.
 
 ## Create a release
 ```bash
@@ -17,14 +17,23 @@ git checkout main
 git pull origin main
 git tag v0.1.0
 git push origin v0.1.0
+# Optional GitHub release object
+# gh release create v0.1.0 --generate-notes
 ```
 
-## What happens in CI/CD
-- Pipeline runs lint → tests → docker-build → smoke-test → tag-version → push-image.
-- Image is always tagged with short SHA (`:<sha7>`).
-- For semver tags/releases, image also gets semver tag (`:vX.Y.Z`).
-- Image destination: `ghcr.io/<owner>/<repo>`.
+## CI/CD behavior by event
+- **pull_request**: runs full validation (`lint` → `tests` → `docker-build` → `smoke-test` → `tag-version`), **skips push-image** by design.
+- **push to main**: runs full pipeline and publishes SHA-tagged image.
+- **push tag vX.Y.Z**: runs full pipeline and publishes SHA + semver tags.
+- **release published**: runs full pipeline and publishes SHA + release tag.
+
+## Image tag strategy
+- Always includes short SHA tag from `docker/metadata-action`.
+- Adds semver/release tag when the ref/event provides one.
+- Build args propagate metadata into runtime endpoint:
+  - `APP_VERSION`
+  - `GIT_SHA`
 
 ## Rollback quick note
-- Re-deploy a previous known-good GHCR image tag (`sha` or semver).
-- Create follow-up patch release if needed (`vX.Y.(Z+1)`).
+- Re-deploy a previous known-good GHCR tag (`sha` or semver).
+- If needed, publish a patch release (`vX.Y.(Z+1)`).
