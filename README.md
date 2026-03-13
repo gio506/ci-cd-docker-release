@@ -60,8 +60,8 @@ make pipeline
 ```
 This runs `shell-check`, then `yamllint` (if installed), then `compose-up` + health + `smoke` + teardown (if Docker is available).
 
-## CI gating (PR into `main`)
-Pull requests targeting `main` must pass all 4 stages:
+## CI gating (PR into `main` and `dev`)
+Pull requests targeting `main` or `dev` must pass all 4 stages:
 1. `shell-check` validates script syntax with `bash -n`.
 2. `yamllint` for workflow + compose files.
 3. `compose-up` starts LocalStack and waits for health.
