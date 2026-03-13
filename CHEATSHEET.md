@@ -30,3 +30,19 @@ aws --endpoint-url "$AWS_ENDPOINT" sqs receive-message --queue-url "$QUEUE_URL" 
 docker compose --profile tools up -d awslocal
 docker compose exec awslocal aws --endpoint-url http://localstack:4566 s3 ls
 ```
+
+
+## SNS + DynamoDB
+```bash
+aws --endpoint-url "$AWS_ENDPOINT" sns create-topic --name lab-topic
+TOPIC_ARN=$(aws --endpoint-url "$AWS_ENDPOINT" sns create-topic --name lab-topic --query 'TopicArn' --output text)
+aws --endpoint-url "$AWS_ENDPOINT" sns publish --topic-arn "$TOPIC_ARN" --message "hello"
+
+aws --endpoint-url "$AWS_ENDPOINT" dynamodb create-table \
+  --table-name lab-table \
+  --attribute-definitions AttributeName=id,AttributeType=S \
+  --key-schema AttributeName=id,KeyType=HASH \
+  --billing-mode PAY_PER_REQUEST
+aws --endpoint-url "$AWS_ENDPOINT" dynamodb put-item --table-name lab-table --item '{"id":{"S":"1"},"value":{"S":"ok"}}'
+aws --endpoint-url "$AWS_ENDPOINT" dynamodb get-item --table-name lab-table --key '{"id":{"S":"1"}}'
+```

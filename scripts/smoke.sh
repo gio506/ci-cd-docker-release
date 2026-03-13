@@ -6,6 +6,8 @@ cd "$ROOT_DIR"
 
 BUCKET_NAME="${BUCKET_NAME:-lab-bucket}"
 QUEUE_NAME="${QUEUE_NAME:-lab-queue}"
+TOPIC_NAME="${TOPIC_NAME:-lab-topic}"
+TABLE_NAME="${TABLE_NAME:-lab-table}"
 AWS_ENDPOINT="${AWS_ENDPOINT:-http://localhost:4566}"
 AWS_REGION="${AWS_REGION:-us-east-1}"
 
@@ -30,5 +32,15 @@ aws_exec "$AWS_ENDPOINT" sqs send-message --queue-url "$QUEUE_URL" --message-bod
 MESSAGE_BODY="$(aws_exec "$AWS_ENDPOINT" sqs receive-message --queue-url "$QUEUE_URL" --max-number-of-messages 1 --wait-time-seconds 1 --query 'Messages[0].Body' --output text)"
 [[ "$MESSAGE_BODY" == "smoke-message" ]]
 echo "sqs send/receive smoke passed"
+
+TOPIC_ARN="$(aws_exec "$AWS_ENDPOINT" sns create-topic --name "$TOPIC_NAME" --query 'TopicArn' --output text)"
+MSG_ID="$(aws_exec "$AWS_ENDPOINT" sns publish --topic-arn "$TOPIC_ARN" --message 'smoke-topic-message' --query 'MessageId' --output text)"
+[[ "$MSG_ID" != "None" ]]
+echo "sns publish smoke passed"
+
+aws_exec "$AWS_ENDPOINT" dynamodb put-item --table-name "$TABLE_NAME" --item '{"id":{"S":"smoke"},"value":{"S":"ok"}}' >/dev/null
+DDB_VALUE="$(aws_exec "$AWS_ENDPOINT" dynamodb get-item --table-name "$TABLE_NAME" --key '{"id":{"S":"smoke"}}' --query 'Item.value.S' --output text)"
+[[ "$DDB_VALUE" == "ok" ]]
+echo "dynamodb put/get smoke passed"
 
 echo "all smoke checks passed"
