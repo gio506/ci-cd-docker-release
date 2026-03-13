@@ -52,6 +52,14 @@ Run AWS CLI against LocalStack inside container:
 docker compose exec awslocal aws --endpoint-url http://localstack:4566 s3 ls
 ```
 
+
+## Run pipeline locally
+Use the same stage order as CI:
+```bash
+make pipeline
+```
+This runs `shell-check`, then `yamllint` (if installed), then `compose-up` + health + `smoke` + teardown (if Docker is available).
+
 ## CI gating (PR into `main`)
 Pull requests targeting `main` must pass all 4 stages:
 1. `shell-check` validates script syntax with `bash -n`.

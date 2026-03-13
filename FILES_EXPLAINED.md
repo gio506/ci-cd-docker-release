@@ -5,6 +5,7 @@
 - `scripts/seed.sh`: idempotent creation of bucket/queue/topic/table.
 - `scripts/smoke.sh`: integration smoke checks for S3, SQS, SNS, and DynamoDB.
 - `scripts/down.sh`: stop stack, optional purge mode.
+- `scripts/pipeline-local.sh`: local CI-equivalent stage runner with environment-aware skips.
 - `Makefile`: command wrappers for local workflow.
 - `.github/workflows/ci-cd-docker-release.yml`: CI stages for shell syntax checks, YAML lint, compose health, and smoke+teardown.
 - `.yamllint.yml`: YAML linting configuration used locally and in CI.

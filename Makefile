@@ -1,6 +1,6 @@
 SHELL := /usr/bin/env bash
 
-.PHONY: up seed smoke down clean
+.PHONY: up seed smoke down clean pipeline
 
 up:
 	./scripts/up.sh
@@ -16,3 +16,7 @@ down:
 
 clean:
 	./scripts/down.sh --purge
+
+
+pipeline:
+	./scripts/pipeline-local.sh
