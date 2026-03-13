@@ -1,12 +1,12 @@
 # compose-localstack
 
-Repeatable LocalStack lab for S3 + SQS with idempotent scripts, Makefile wrappers, and CI smoke verification.
+Repeatable LocalStack lab for free-tier services: S3, SQS, SNS, DynamoDB, Secrets Manager, and SSM with idempotent scripts, Makefile wrappers, and CI smoke verification.
 
 ## Repo Map
-- `docker-compose.yml` — LocalStack service (S3/SQS) plus optional `awslocal` tools container profile.
+- `docker-compose.yml` — LocalStack service (S3/SQS/SNS/DynamoDB/Secrets Manager/SSM) plus optional `awslocal` tools container profile.
 - `scripts/up.sh` — starts LocalStack and waits for healthy status (idempotent).
-- `scripts/seed.sh` — creates bucket + queue only if missing (idempotent).
-- `scripts/smoke.sh` — verifies S3 put/get and SQS send/receive.
+- `scripts/seed.sh` — creates bucket, queue, topic, and DynamoDB table only if missing (idempotent).
+- `scripts/smoke.sh` — verifies S3, SQS, SNS publish, and DynamoDB put/get.
 - `scripts/down.sh` — tears down stack, with optional `--purge` volume cleanup.
 - `Makefile` — concise wrappers for script workflow.
 - `.github/workflows/ci-cd-docker-release.yml` — CI gating pipeline for lint/up/smoke+teardown.
@@ -53,10 +53,11 @@ docker compose exec awslocal aws --endpoint-url http://localstack:4566 s3 ls
 ```
 
 ## CI gating (PR into `main`)
-Pull requests targeting `main` must pass all 3 stages:
-1. `yamllint` for workflow + compose files.
-2. `compose-up` starts LocalStack and waits for health.
-3. `smoke` runs `scripts/smoke.sh` and always tears down (`scripts/down.sh --purge`).
+Pull requests targeting `main` must pass all 4 stages:
+1. `shell-check` validates script syntax with `bash -n`.
+2. `yamllint` for workflow + compose files.
+3. `compose-up` starts LocalStack and waits for health.
+4. `smoke` runs `scripts/smoke.sh` and always tears down (`scripts/down.sh --purge`).
 
 This acts as PR gate before merge.
 
