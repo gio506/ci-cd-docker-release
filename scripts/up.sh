@@ -4,7 +4,7 @@ set -euo pipefail
 ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 cd "$ROOT_DIR"
 
-if docker compose ps localstack --status running >/dev/null 2>&1; then
+if docker compose ps --status running --services 2>/dev/null | grep -qx 'localstack'; then
   echo "localstack is already running"
 else
   docker compose up -d localstack
