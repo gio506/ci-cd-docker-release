@@ -1,74 +1,32 @@
-# CI/CD + Docker Release Cheatsheet
+# LocalStack S3 + SQS Cheatsheet
 
-## Python environment
+## Defaults used by scripts
 ```bash
-python -m venv .venv
-source .venv/bin/activate
-pip install -r requirements-dev.txt
+export AWS_ACCESS_KEY_ID=test
+export AWS_SECRET_ACCESS_KEY=test
+export AWS_DEFAULT_REGION=us-east-1
+export AWS_ENDPOINT=http://localhost:4566
 ```
 
-## Local quality
+## S3 (LocalStack)
 ```bash
-ruff check .                    # Lint and import ordering
-pytest -q                       # Run test suite
-python -m compileall app.py tests
+aws --endpoint-url "$AWS_ENDPOINT" s3api create-bucket --bucket lab-bucket
+aws --endpoint-url "$AWS_ENDPOINT" s3 ls
+aws --endpoint-url "$AWS_ENDPOINT" s3 cp ./file.txt s3://lab-bucket/file.txt
+aws --endpoint-url "$AWS_ENDPOINT" s3 cp s3://lab-bucket/file.txt ./file.out.txt
 ```
 
-## Run app locally
+## SQS (LocalStack)
 ```bash
-uvicorn app:app --host 0.0.0.0 --port 8000
-curl -s http://localhost:8000/health
-curl -s http://localhost:8000/version
+aws --endpoint-url "$AWS_ENDPOINT" sqs create-queue --queue-name lab-queue
+aws --endpoint-url "$AWS_ENDPOINT" sqs get-queue-url --queue-name lab-queue
+QUEUE_URL=$(aws --endpoint-url "$AWS_ENDPOINT" sqs get-queue-url --queue-name lab-queue --query 'QueueUrl' --output text)
+aws --endpoint-url "$AWS_ENDPOINT" sqs send-message --queue-url "$QUEUE_URL" --message-body "hello"
+aws --endpoint-url "$AWS_ENDPOINT" sqs receive-message --queue-url "$QUEUE_URL" --max-number-of-messages 1
 ```
 
-## Docker lifecycle (local)
+## Optional tools container
 ```bash
-docker build -t ci-cd-docker-release:local .
-docker run --rm -p 8000:8000 \
-  -e APP_VERSION=local-dev \
-  -e GIT_SHA=$(git rev-parse --short HEAD) \
-  ci-cd-docker-release:local
-```
-
-## Docker smoke test (local)
-```bash
-docker run -d --name smoke -p 8000:8000 \
-  -e APP_VERSION=smoke \
-  -e GIT_SHA=smoke-sha \
-  ci-cd-docker-release:local
-curl -fsS http://localhost:8000/health
-curl -fsS http://localhost:8000/version
-docker logs smoke
-docker rm -f smoke
-```
-
-## Tagging & release
-```bash
-git tag v0.1.0                 # Create semver tag
-git push origin v0.1.0         # Trigger semver publish
-gh release create v0.1.0 --generate-notes
-```
-
-## GHCR auth and manual push fallback
-```bash
-echo "$GITHUB_TOKEN" | docker login ghcr.io -u <github-user> --password-stdin
-docker tag ci-cd-docker-release:local ghcr.io/<owner>/<repo>:$(git rev-parse --short HEAD)
-docker push ghcr.io/<owner>/<repo>:$(git rev-parse --short HEAD)
-```
-
-## Actions troubleshooting
-```bash
-# Why was push-image skipped?
-# Because event/ref didn't match: main push, semver tag, or release.
-
-git status
-git log --oneline -n 5
-git show --name-only
-```
-
-## Useful one-liners
-```bash
-git rev-parse --short HEAD
-git describe --tags --always
-git tag --list 'v*'
+docker compose --profile tools up -d awslocal
+docker compose exec awslocal aws --endpoint-url http://localstack:4566 s3 ls
 ```

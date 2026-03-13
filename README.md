@@ -1,57 +1,77 @@
-# ci-cd-docker-release
+# compose-localstack
 
-Tiny FastAPI app with `/health` and `/version` endpoints plus a production-minded GitHub Actions pipeline for linting, tests, Docker build/smoke checks, tag resolution, and GHCR publishing.
+Repeatable LocalStack lab for S3 + SQS with idempotent scripts, Makefile wrappers, and CI smoke verification.
 
-## App endpoints
-- `GET /health` → basic status check.
-- `GET /version` → app version + commit SHA sourced from environment variables.
+## Repo Map
+- `docker-compose.yml` — LocalStack service (S3/SQS) plus optional `awslocal` tools container profile.
+- `scripts/up.sh` — starts LocalStack and waits for healthy status (idempotent).
+- `scripts/seed.sh` — creates bucket + queue only if missing (idempotent).
+- `scripts/smoke.sh` — verifies S3 put/get and SQS send/receive.
+- `scripts/down.sh` — tears down stack, with optional `--purge` volume cleanup.
+- `Makefile` — concise wrappers for script workflow.
+- `.github/workflows/ci-cd-docker-release.yml` — CI gating pipeline for lint/up/smoke+teardown.
+- `.yamllint.yml` — YAML linting rules tuned for GitHub Actions files.
+- `CHEATSHEET.md` — high-signal `awslocal`/AWS CLI commands for this lab.
+- `FILES_EXPLAINED.md` — file-by-file explanation of repository contents.
 
-## CI/CD stages (6 jobs)
-1. **lint**: runs `ruff check .`.
-2. **tests**: runs `pytest -q`.
-3. **docker-build**: builds a Docker image archive for CI validation.
-4. **smoke-test**: runs container and validates both `/health` and `/version`.
-5. **tag-version**: generates Docker tags (SHA + optional semver/release tag) and resolves `APP_VERSION`.
-6. **push-image**: pushes tags to GHCR only on `main`, semver tags, or release events.
-
-## Workflow best-practice details
-- Uses job-level `timeout-minutes` to prevent hanging runs.
-- Uses `actions/setup-python` pip cache for faster Python stages.
-- Uses top-level `permissions: contents: read` and only elevates `packages: write` in push job.
-- Uses workflow `concurrency` to cancel stale duplicate runs on same ref.
-- Uses `docker/metadata-action` for robust OCI tag generation.
-
-## Why `push-image` can show as **skipped**
-This is expected on pull requests. Push is intentionally guarded to avoid publishing unmerged PR images:
-- allowed: `push` to `main`, semver tag `vX.Y.Z`, or `release` event.
-- skipped: `pull_request` runs.
-
-## GHCR permissions/secrets
-- Default setup uses `secrets.GITHUB_TOKEN` with `packages: write` permission in `push-image`.
-- Ensure repository/org Actions settings allow package write.
-- If org policy blocks `GITHUB_TOKEN` for packages, use a PAT (`write:packages`) and swap the login password secret.
-
-## Local run
+## Quick Start
 ```bash
-python -m venv .venv
-source .venv/bin/activate
-pip install -r requirements-dev.txt
-uvicorn app:app --reload
+make up
+make seed
+make smoke
+make down
 ```
 
-## Repository tree
-```text
-.
-├── .github/workflows/ci-cd-docker-release.yml  # 6-stage CI/CD pipeline (lint/test/build/smoke/tag/push)
-├── app.py                                      # FastAPI service (/health, /version)
-├── tests/test_app.py                           # API tests
-├── tests/conftest.py                           # Pytest import-path guard for CI consistency
-├── Dockerfile                                  # Container build recipe (non-root + healthcheck)
-├── requirements.txt                            # Runtime deps
-├── requirements-dev.txt                        # Dev/test/lint deps
-├── pyproject.toml                              # Ruff configuration
-├── CHANGELOG.md                                # Release history
-├── RELEASE.md                                  # Release process/checklist
-├── CHEATSHEET.md                               # High-value command reference
-└── README.md                                   # Project overview
+## Local Steps
+1. Ensure Docker and Docker Compose are available.
+2. Ensure AWS CLI v2 is installed locally (`aws --version`).
+3. Start LocalStack:
+   ```bash
+   make up
+   ```
+4. Seed resources:
+   ```bash
+   make seed
+   ```
+5. Run smoke checks:
+   ```bash
+   make smoke
+   ```
+6. Stop environment:
+   ```bash
+   make down
+   ```
+
+## Optional tools container usage
+Start tools profile:
+```bash
+docker compose --profile tools up -d awslocal
 ```
+Run AWS CLI against LocalStack inside container:
+```bash
+docker compose exec awslocal aws --endpoint-url http://localstack:4566 s3 ls
+```
+
+## CI gating (PR into `main`)
+Pull requests targeting `main` must pass all 3 stages:
+1. `yamllint` for workflow + compose files.
+2. `compose-up` starts LocalStack and waits for health.
+3. `smoke` runs `scripts/smoke.sh` and always tears down (`scripts/down.sh --purge`).
+
+This acts as PR gate before merge.
+
+## Troubleshooting
+- **`aws: command not found`**: install AWS CLI v2 locally or use the optional tools container.
+- **Port 4566 in use**: stop conflicting service or remap ports in `docker-compose.yml`.
+- **Health check timeout**: run `docker compose logs localstack` and verify Docker resources.
+- **Stale state**: run `make clean` to remove containers and LocalStack data volume.
+
+## Cleanup
+- Standard stop:
+  ```bash
+  make down
+  ```
+- Full cleanup (remove volumes/state):
+  ```bash
+  make clean
+  ```
