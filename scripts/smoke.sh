@@ -8,6 +8,8 @@ BUCKET_NAME="${BUCKET_NAME:-lab-bucket}"
 QUEUE_NAME="${QUEUE_NAME:-lab-queue}"
 TOPIC_NAME="${TOPIC_NAME:-lab-topic}"
 TABLE_NAME="${TABLE_NAME:-lab-table}"
+SECRET_NAME="${SECRET_NAME:-lab-secret}"
+PARAMETER_NAME="${PARAMETER_NAME:-/lab/app/config}"
 AWS_ENDPOINT="${AWS_ENDPOINT:-http://localhost:4566}"
 AWS_REGION="${AWS_REGION:-us-east-1}"
 
@@ -42,5 +44,24 @@ aws_exec "$AWS_ENDPOINT" dynamodb put-item --table-name "$TABLE_NAME" --item '{"
 DDB_VALUE="$(aws_exec "$AWS_ENDPOINT" dynamodb get-item --table-name "$TABLE_NAME" --key '{"id":{"S":"smoke"}}' --query 'Item.value.S' --output text)"
 [[ "$DDB_VALUE" == "ok" ]]
 echo "dynamodb put/get smoke passed"
+
+aws_exec "$AWS_ENDPOINT" secretsmanager create-secret \
+  --name "$SECRET_NAME" \
+  --secret-string 'smoke-secret-value' >/dev/null 2>&1 || \
+aws_exec "$AWS_ENDPOINT" secretsmanager put-secret-value \
+  --secret-id "$SECRET_NAME" \
+  --secret-string 'smoke-secret-value' >/dev/null
+SECRET_VALUE="$(aws_exec "$AWS_ENDPOINT" secretsmanager get-secret-value --secret-id "$SECRET_NAME" --query 'SecretString' --output text)"
+[[ "$SECRET_VALUE" == "smoke-secret-value" ]]
+echo "secretsmanager put/get smoke passed"
+
+aws_exec "$AWS_ENDPOINT" ssm put-parameter \
+  --name "$PARAMETER_NAME" \
+  --type String \
+  --value 'smoke-parameter-value' \
+  --overwrite >/dev/null
+PARAMETER_VALUE="$(aws_exec "$AWS_ENDPOINT" ssm get-parameter --name "$PARAMETER_NAME" --query 'Parameter.Value' --output text)"
+[[ "$PARAMETER_VALUE" == "smoke-parameter-value" ]]
+echo "ssm put/get smoke passed"
 
 echo "all smoke checks passed"
