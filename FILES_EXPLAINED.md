@@ -1,14 +1,28 @@
-# FILES_EXPLAINED
+# Files Explained
 
-- `docker-compose.yml`: defines LocalStack with free-tier services (S3, SQS, SNS, DynamoDB, Secrets Manager, SSM) and optional AWS CLI helper container.
-- `scripts/up.sh`: idempotent startup and health wait.
-- `scripts/seed.sh`: idempotent creation of bucket/queue/topic/table.
-- `scripts/smoke.sh`: integration smoke checks for S3, SQS, SNS, and DynamoDB.
-- `scripts/down.sh`: stop stack, optional purge mode.
-- `scripts/pipeline-local.sh`: local CI-equivalent stage runner with environment-aware skips.
-- `Makefile`: command wrappers for local workflow.
-- `.github/workflows/ci-cd-docker-release.yml`: CI stages for shell syntax checks, YAML lint, compose health, and smoke+teardown.
-- `.yamllint.yml`: YAML linting configuration used locally and in CI.
-- `README.md`: usage, repo map, troubleshooting, cleanup, and PR gate notes.
-- `CHEATSHEET.md`: copy/paste AWS CLI commands for LocalStack.
-- `FILES_EXPLAINED.md`: concise inventory for all important files.
+- `docker-compose.yml`
+  - Defines LocalStack with S3, SQS, SNS, DynamoDB, Secrets Manager, and SSM.
+- `scripts/up.sh`
+  - Idempotent startup and health wait logic.
+- `scripts/seed.sh`
+  - Idempotent creation of bucket, queue, topic, and table.
+- `scripts/smoke.sh`
+  - Integration smoke checks for S3, SQS, SNS, and DynamoDB.
+- `scripts/down.sh`
+  - Stop stack, with optional purge mode.
+- `scripts/pipeline-local.sh`
+  - Local CI-equivalent stage runner.
+- `scripts/lib.sh`
+  - Shared shell helpers for the scripts.
+- `Makefile`
+  - Command wrappers for local workflow.
+- `.github/workflows/ci-cd-docker-release.yml`
+  - CI stages for shell syntax, YAML lint, compose health, and smoke teardown.
+- `.yamllint.yml`
+  - YAML lint configuration used locally and in CI.
+- `README.md`
+  - Usage, repo map, troubleshooting, cleanup, and CI gate notes.
+- `CHEATSHEET.md`
+  - Copy-paste AWS CLI commands for LocalStack.
+- `FILES_EXPLAINED.md`
+  - Concise inventory for the main files.
